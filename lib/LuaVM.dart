@@ -50,13 +50,9 @@ class LuaVM {
 
     Response response;
     dio.get(stringUrl).then((value) => {
-      response = value
-    }).catchError((err) => {
-      return "An error ocoured: $err".toNativeUtf8()
+      // response = value
     });
-
-
-    print(response.statusCode);
+    // print(response.statusCode);
 
     return "Yippii".toNativeUtf8();
   }
