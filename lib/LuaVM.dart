@@ -23,7 +23,6 @@ typedef VmExecFunc =
 class LuaVM {
   late DynamicLibrary _dynLib;
   late Pointer<Void> _state;
-  final dio = Dio();
 
   LuaVM() {
     if (Platform.isLinux) {
@@ -45,11 +44,11 @@ class LuaVM {
     _state = create();
   }
 
-  Pointer<Utf8> httpRequest(Pointer<Utf8> url) {
+  static Pointer<Utf8> httpRequest(Pointer<Utf8> url) {
     final stringUrl = url.toDartString();
 
     Response response;
-    dio.get(stringUrl).then((value) => {
+    Dio().get(stringUrl).then((value) => {
       // response = value
     });
     // print(response.statusCode);
