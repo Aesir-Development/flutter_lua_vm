@@ -5,6 +5,29 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
+final class Variant extends Struct {
+  @Int32()
+  external int type;
+
+  external VariantUnion value;
+}
+
+final class VariantUnion extends Union {
+  @Int32()
+  external int i;
+
+  @Double()
+  external double d;
+
+  external Pointer<Utf8> s;
+}
+
+class VariantType {
+  static const int intType = 0;
+  static const int doubleType = 1;
+  static const int stringType = 2;
+}
+
 typedef NativeCallbackC = Void Function(Pointer<Void>, Pointer<Utf8>);
 typedef NativeCallbackDart = void Function(Pointer<void>, Pointer<Utf8>);
 
@@ -25,11 +48,25 @@ typedef VmCreateFunc = Pointer<Void> Function();
 typedef VmEvalFunc = Int32 Function(Pointer<Void>, Pointer<Utf8>);
 typedef VmEval = int Function(Pointer<Void>, Pointer<Utf8>);
 
-typedef VmResumeHttpFunc = Void Function(Pointer<Void>, Pointer<Utf8>);
-typedef VmResumeHttp = void Function(Pointer<Void>, Pointer<Utf8>);
+typedef VmResumeHttpFunc =
+    Void Function(Pointer<Void>, Pointer<Void>, Pointer<Utf8>);
+typedef VmResumeHttp =
+    void Function(Pointer<Void>, Pointer<Void>, Pointer<Utf8>);
 
+typedef VmExecC =
+    Pointer<Utf8> Function(
+      Pointer<Void>,
+      Pointer<Utf8>,
+      Int32 argc,
+      Pointer<Variant> argv,
+    );
 typedef VmExecFunc =
-    Pointer<Utf8> Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>);
+    Pointer<Utf8> Function(
+      Pointer<Void>,
+      Pointer<Utf8>,
+      int argc,
+      Pointer<Variant> argv,
+    );
 
 class LuaVM {
   late DynamicLibrary _dynLib;
@@ -69,7 +106,7 @@ class LuaVM {
     _state = create();
   }
 
-  static void httpRequest(Pointer<void> L, Pointer<Utf8> url) {
+  static void httpRequest(Pointer<void> co, Pointer<Utf8> url) {
     final stringUrl = url.toDartString();
     DynamicLibrary tmpLib = getLib();
 
@@ -80,7 +117,11 @@ class LuaVM {
     final future = Dio().get(stringUrl);
     future.then(
       (value) => {
-        resumeHttp(L as Pointer<Void>, value.data.toString().toNativeUtf8()),
+        resumeHttp(
+          _state,
+          co as Pointer<Void>,
+          value.data.toString().toNativeUtf8(),
+        ),
       },
     );
   }
@@ -100,23 +141,53 @@ class LuaVM {
     return result;
   }
 
-  String exec(String func, String args) {
+  String exec(String func, List<Pointer<Variant>> args) {
     final funcExec = _dynLib
-        .lookup<NativeFunction<VmExecFunc>>("vm_exec_func")
+        .lookup<NativeFunction<VmExecC>>("vm_exec_func")
         .asFunction<VmExecFunc>();
     final funcPtr = func.toNativeUtf8();
-    final argsPointer = args.toNativeUtf8();
-    final resultPtr = funcExec(_state, funcPtr, argsPointer);
+    final argv = calloc<Variant>(args.length);
 
-    malloc.free(argsPointer);
+    for (int i = 0; i < args.length; i++) {
+      argv[i] = args[i].ref;
+      calloc.free(args[i]);
+    }
+
+    final resultPtr = funcExec(_state, funcPtr, args.length, argv);
 
     debugPrint("Test");
     if (resultPtr == nullptr) {
       debugPrint("nullptr found");
+      calloc.free(funcPtr);
+      calloc.free(argv);
+      return "";
     }
     final result = resultPtr.toDartString();
     malloc.free(resultPtr);
+    calloc.free(funcPtr);
+    calloc.free(argv);
 
     return result;
+  }
+
+  Pointer<Variant> intArg(int i) {
+    final ptr = calloc<Variant>();
+    ptr.ref.type = VariantType.intType;
+    ptr.ref.value.i = i;
+    return ptr;
+  }
+
+  Pointer<Variant> doubleArg(double d) {
+    final ptr = calloc<Variant>();
+    ptr.ref.type = VariantType.doubleType;
+    ptr.ref.value.d = d;
+    return ptr;
+  }
+
+  Pointer<Variant> stringArg(String s) {
+    final ptr = calloc<Variant>();
+    ptr.ref.type = VariantType.stringType;
+    ptr.ref.value.s = s.toNativeUtf8();
+    return ptr;
   }
 }
