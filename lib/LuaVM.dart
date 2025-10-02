@@ -155,7 +155,6 @@ class LuaVM {
 
     final resultPtr = funcExec(_state, funcPtr, args.length, argv);
 
-    debugPrint("Test");
     if (resultPtr == nullptr) {
       debugPrint("nullptr found");
       calloc.free(funcPtr);
