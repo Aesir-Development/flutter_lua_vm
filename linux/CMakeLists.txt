@@ -7,6 +7,7 @@ set(PLUGIN_NAME "flutter_lua_vm_plugin")
 list(APPEND PLUGIN_SOURCES
   "flutter_lua_vm_plugin.cc"
   "${CMAKE_CURRENT_SOURCE_DIR}/../src/lua_vm.c"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../src/task_manager.c"
 )
 
 # All Lua C sources
