@@ -9,6 +9,7 @@ set(PLUGIN_NAME "flutter_lua_vm_plugin")  # Match this to your open call
 # Plugin sources
 list(APPEND PLUGIN_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/../src/lua_vm.c
+  "${CMAKE_CURRENT_SOURCE_DIR}/../src/task_manager.c"
 )
 
 # Lua sources
